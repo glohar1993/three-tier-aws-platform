@@ -139,6 +139,7 @@ metadata:
   description: Mastercard Platform Engineering — AWS CDK, Backstage, Cloud WAN
 spec:
   type: team
+  children: []
   members:
     - glohar1993
 
