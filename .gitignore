@@ -12,3 +12,5 @@ outputs.json
 .claude/
 .DS_Store
 **/.DS_Store
+# Added by code-review-graph
+.code-review-graph/
