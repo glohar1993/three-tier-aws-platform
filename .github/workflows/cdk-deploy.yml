@@ -130,8 +130,14 @@ jobs:
           CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
           CDK_DEFAULT_REGION: ${{ env.AWS_REGION }}
 
-      - name: CDK Deploy — ApplicationStack + DataStack (parallel)
-        run: npx cdk deploy ApplicationStack DataStack --require-approval never --concurrency 2
+      - name: CDK Deploy — ApplicationStack
+        run: npx cdk deploy ApplicationStack --require-approval never
+        env:
+          CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+          CDK_DEFAULT_REGION: ${{ env.AWS_REGION }}
+
+      - name: CDK Deploy — DataStack
+        run: npx cdk deploy DataStack --require-approval never
         env:
           CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
           CDK_DEFAULT_REGION: ${{ env.AWS_REGION }}
