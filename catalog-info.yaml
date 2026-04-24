@@ -36,7 +36,7 @@ metadata:
     - Tier 3: RDS MySQL 8.0 Multi-AZ (isolated)
   annotations:
     github.com/project-slug: glohar1993/three-tier-aws-platform
-    backstage.io/techdocs-ref: dir:.
+    backstage.io/techdocs-ref: url:https://github.com/glohar1993/three-tier-aws-platform
     aws.amazon.com/account-id: "824033490704"
     aws.amazon.com/region: us-east-1
     backstage.io/source-location: url:https://github.com/glohar1993/three-tier-aws-platform
