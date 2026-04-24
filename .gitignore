@@ -1,0 +1,14 @@
+node_modules/
+cdk.out/
+dist/
+*.js
+*.d.ts
+!jest.config.js
+.env
+.env.*
+*.pem
+*.key
+outputs.json
+.claude/
+.DS_Store
+**/.DS_Store

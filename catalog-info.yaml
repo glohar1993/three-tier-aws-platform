@@ -1,0 +1,157 @@
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata:
+  name: three-tier-platform
+  title: Three-Tier AWS Platform
+  description: Production-grade 3-tier AWS architecture — ALB + EC2 ASG + RDS MySQL
+  tags:
+    - aws
+    - platform
+    - production
+    - pci-ready
+  links:
+    - url: http://three-tier-alb-2108763003.us-east-1.elb.amazonaws.com
+      title: Live Application URL
+      icon: web
+    - url: https://github.com/glohar1993/three-tier-aws-platform
+      title: GitHub Repository
+      icon: github
+    - url: https://console.aws.amazon.com/cloudformation/home?region=us-east-1
+      title: AWS CloudFormation Console
+      icon: cloud
+spec:
+  owner: group:platform-team
+  domain: platform
+
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: three-tier-app
+  title: Three-Tier Application (EC2 + RDS)
+  description: |
+    Production 3-tier architecture deployed on AWS.
+    - Tier 1: Application Load Balancer (public)
+    - Tier 2: EC2 Auto Scaling Group (private, t3.small, min 2 / max 6)
+    - Tier 3: RDS MySQL 8.0 Multi-AZ (isolated)
+  annotations:
+    github.com/project-slug: glohar1993/three-tier-aws-platform
+    backstage.io/techdocs-ref: dir:.
+    aws.amazon.com/account-id: "824033490704"
+    aws.amazon.com/region: us-east-1
+    backstage.io/source-location: url:https://github.com/glohar1993/three-tier-aws-platform
+  tags:
+    - aws-cdk
+    - typescript
+    - ec2
+    - rds
+    - mysql
+    - production
+    - three-tier
+  links:
+    - url: http://three-tier-alb-2108763003.us-east-1.elb.amazonaws.com/health
+      title: Health Check Endpoint
+      icon: dashboard
+    - url: https://console.aws.amazon.com/ec2/v2/home?region=us-east-1#AutoScalingGroups
+      title: Auto Scaling Group (AWS Console)
+      icon: cloud
+    - url: https://console.aws.amazon.com/rds/home?region=us-east-1#databases
+      title: RDS MySQL (AWS Console)
+      icon: storage
+spec:
+  type: service
+  lifecycle: production
+  owner: group:platform-team
+  system: three-tier-platform
+  dependsOn:
+    - resource:three-tier-vpc
+    - resource:three-tier-rds
+    - resource:three-tier-alb
+
+---
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: three-tier-vpc
+  title: Three-Tier VPC
+  description: |
+    VPC with 9 subnets across 3 AZs.
+    CIDR: 10.0.0.0/16
+    - 3 Public subnets (ALB)
+    - 3 Private subnets (EC2)
+    - 3 Isolated subnets (RDS)
+    - 3 NAT Gateways (one per AZ)
+  annotations:
+    aws.amazon.com/account-id: "824033490704"
+    aws.amazon.com/region: us-east-1
+  tags: [aws, vpc, network]
+spec:
+  type: aws-vpc
+  owner: group:platform-team
+  system: three-tier-platform
+
+---
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: three-tier-rds
+  title: RDS MySQL 8.0 (Multi-AZ)
+  description: |
+    Production MySQL database.
+    Endpoint: three-tier-mysql.cibs400gk9r2.us-east-1.rds.amazonaws.com
+    Type: db.t3.medium, Multi-AZ, Encrypted, 7-day backup
+    Credentials: AWS Secrets Manager (three-tier/db/credentials)
+  annotations:
+    aws.amazon.com/account-id: "824033490704"
+    aws.amazon.com/region: us-east-1
+  tags: [aws, rds, mysql, production]
+spec:
+  type: aws-rds
+  owner: group:platform-team
+  system: three-tier-platform
+
+---
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: three-tier-alb
+  title: Application Load Balancer
+  description: |
+    Internet-facing ALB.
+    DNS: three-tier-alb-2108763003.us-east-1.elb.amazonaws.com
+    Port 80 → EC2 ASG (port 8080)
+    Health check: GET /health every 30s
+  annotations:
+    aws.amazon.com/account-id: "824033490704"
+    aws.amazon.com/region: us-east-1
+  tags: [aws, alb, loadbalancer]
+spec:
+  type: aws-alb
+  owner: group:platform-team
+  system: three-tier-platform
+
+---
+apiVersion: backstage.io/v1alpha1
+kind: Group
+metadata:
+  name: platform-team
+  title: Platform Engineering Team
+  description: Mastercard Platform Engineering — AWS CDK, Backstage, Cloud WAN
+spec:
+  type: team
+  members:
+    - glohar1993
+
+---
+apiVersion: backstage.io/v1alpha1
+kind: User
+metadata:
+  name: glohar1993
+  title: Ganesh Lohar
+  description: Platform Engineer — AWS CDK, Backstage, Mastercard
+spec:
+  profile:
+    email: ganeshml15@gmail.com
+    displayName: Ganesh Lohar
+  memberOf:
+    - platform-team
