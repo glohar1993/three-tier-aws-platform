@@ -16,7 +16,9 @@ on:
 
 env:
   AWS_REGION: us-east-1
+  AWS_ACCOUNT_ID: '824033490704'
   NODE_VERSION: '22'
+  ROLE_ARN: arn:aws:iam::824033490704:role/GitHubActionsDeployRole
 
 jobs:
   # ─────────────────────────────────────────────
@@ -25,6 +27,9 @@ jobs:
   validate:
     name: Validate CDK Synth
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -35,6 +40,12 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
+      - name: Configure AWS credentials (OIDC — no secrets)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
       - name: Install dependencies
         run: npm ci
 
@@ -44,7 +55,7 @@ jobs:
       - name: CDK Synth (validate CloudFormation output)
         run: npx cdk synth --all
         env:
-          CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+          CDK_DEFAULT_ACCOUNT: ${{ env.AWS_ACCOUNT_ID }}
           CDK_DEFAULT_REGION: ${{ env.AWS_REGION }}
 
       - name: Upload synth output as artifact
@@ -71,7 +82,6 @@ jobs:
 
       - name: Scan for secrets in code
         run: |
-          # Simple grep for common secret patterns
           if grep -rE "(AKIA[0-9A-Z]{16}|password\s*=\s*['\"][^'\"]{8,})" \
             --include="*.ts" --include="*.js" \
             --exclude-dir=node_modules --exclude-dir=cdk.out .; then
@@ -88,8 +98,11 @@ jobs:
     name: Deploy to AWS
     runs-on: ubuntu-latest
     needs: [validate, security-scan]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    if: (github.ref == 'refs/heads/main' && github.event_name == 'push') || github.event_name == 'workflow_dispatch'
     environment: production
+    permissions:
+      id-token: write
+      contents: read
 
     steps:
       - name: Checkout code
@@ -101,12 +114,14 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
-      - name: Configure AWS Credentials
+      - name: Configure AWS credentials (OIDC — no secrets)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ env.ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
+
+      - name: Verify AWS identity
+        run: aws sts get-caller-identity
 
       - name: Install dependencies
         run: npm ci
@@ -115,31 +130,31 @@ jobs:
         run: npx cdk diff --all
         continue-on-error: true
         env:
-          CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+          CDK_DEFAULT_ACCOUNT: ${{ env.AWS_ACCOUNT_ID }}
           CDK_DEFAULT_REGION: ${{ env.AWS_REGION }}
 
       - name: CDK Deploy — NetworkStack
         run: npx cdk deploy NetworkStack --require-approval never
         env:
-          CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+          CDK_DEFAULT_ACCOUNT: ${{ env.AWS_ACCOUNT_ID }}
           CDK_DEFAULT_REGION: ${{ env.AWS_REGION }}
 
       - name: CDK Deploy — PresentationStack
         run: npx cdk deploy PresentationStack --require-approval never
         env:
-          CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+          CDK_DEFAULT_ACCOUNT: ${{ env.AWS_ACCOUNT_ID }}
           CDK_DEFAULT_REGION: ${{ env.AWS_REGION }}
 
       - name: CDK Deploy — ApplicationStack
         run: npx cdk deploy ApplicationStack --require-approval never
         env:
-          CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+          CDK_DEFAULT_ACCOUNT: ${{ env.AWS_ACCOUNT_ID }}
           CDK_DEFAULT_REGION: ${{ env.AWS_REGION }}
 
       - name: CDK Deploy — DataStack
         run: npx cdk deploy DataStack --require-approval never
         env:
-          CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+          CDK_DEFAULT_ACCOUNT: ${{ env.AWS_ACCOUNT_ID }}
           CDK_DEFAULT_REGION: ${{ env.AWS_REGION }}
 
       - name: Get stack outputs
@@ -188,6 +203,9 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy'
     environment: production
+    permissions:
+      id-token: write
+      contents: read
 
     steps:
       - name: Checkout code
@@ -199,11 +217,10 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
-      - name: Configure AWS Credentials
+      - name: Configure AWS credentials (OIDC — no secrets)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ env.ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Install dependencies
@@ -212,5 +229,5 @@ jobs:
       - name: CDK Destroy All Stacks
         run: npx cdk destroy --all --force
         env:
-          CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+          CDK_DEFAULT_ACCOUNT: ${{ env.AWS_ACCOUNT_ID }}
           CDK_DEFAULT_REGION: ${{ env.AWS_REGION }}
